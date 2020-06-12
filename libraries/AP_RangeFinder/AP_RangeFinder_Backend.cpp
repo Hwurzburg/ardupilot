@@ -55,6 +55,26 @@ bool AP_RangeFinder_Backend::has_data() const {
 // update status based on distance measurement
 void AP_RangeFinder_Backend::update_status()
 {
+    //Glitch filter
+    int range = 100;
+    if (range >0) {                                  //skip filter if FLT_RNG = 0
+       if (is_zero(mean_alt)) {                      //if running avg is zero always use measurement as intial value
+          mean_alt = state.distance_cm;
+       } else {
+           const float d = fabsf(mean_alt - state.distance_cm) /mean_alt;  // diff divide by mean value in percent/100 
+           float koeff = .2;
+          
+           if (d * 100.0f > range) {  // check the  % difference from mean value outside allowed range, if so replace with average
+              float temp = mean_alt;
+              koeff /= (d * 2.0f);  // reduce effect that bad sample has on average proportionately to it error magnitude
+              mean_alt = mean_alt * (1 - koeff) + state.distance_cm * koeff; // update complimentary filter with out of range measurement 
+              state.distance_cm = temp; // pass previous mean on as measurement instead              
+           } else {                    // otherwise just add to average and pass it on
+              mean_alt = mean_alt * (1 - koeff) + state.distance_cm * koeff; 
+           }
+       }
+    }
+
     // check distance
     if ((int16_t)state.distance_cm > params.max_distance_cm) {
         set_status(RangeFinder::Status::OutOfRangeHigh);

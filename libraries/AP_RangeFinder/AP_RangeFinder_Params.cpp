@@ -89,6 +89,15 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("GNDCLEAR", 12, AP_RangeFinder_Params, ground_clearance_cm, RANGEFINDER_GROUND_CLEARANCE_CM_DEFAULT),
 
+/*    // @Param: FLT_RNG
+    // @DisplayName: Glitch filter maximum deviation range allowed.
+    // @Description: This parameter sets the maximum deviation that a measurement can have from the running average to be passed on, those outside are replaced by the running average. 0 percent disables this filter.
+    // @Units: %
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Advanced
+    AP_GROUPINFO("FLT_RANGE", 13, AP_RangeFinder_Params, filter_range, 0),
+*/
     // @Param: ADDR
     // @DisplayName: Bus address of sensor
     // @Description: This sets the bus address of the sensor, where applicable. Used for the I2C and UAVCAN sensors to allow for multiple sensors on different addresses. A value of 0 disables the sensor.

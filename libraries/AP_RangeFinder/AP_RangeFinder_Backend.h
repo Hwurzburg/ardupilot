@@ -74,4 +74,8 @@ protected:
     RangeFinder::Type _backend_type;
 
     virtual MAV_DISTANCE_SENSOR _get_mav_distance_sensor_type() const = 0;
+
+private:
+
+    AP_Float mean_alt;
 };
