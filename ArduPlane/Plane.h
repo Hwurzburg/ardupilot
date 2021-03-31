@@ -855,6 +855,7 @@ private:
     void calc_nav_yaw_coordinated(float speed_scaler);
     void calc_nav_yaw_course(void);
     void calc_nav_yaw_ground(void);
+    bool speed_scaling_surpressed;
 
     // GCS_Mavlink.cpp
     void send_servo_out(mavlink_channel_t chan);

@@ -348,6 +348,9 @@ void Plane::do_takeoff(const AP_Mission::Mission_Command& cmd)
     steer_state.locked_course_err = 0;
     steer_state.hold_course_cd = -1;
     auto_state.baro_takeoff_alt = barometer.get_altitude();
+    if (!plane.ahrs.airspeed_sensor_enabled()) {
+        speed_scaling_surpressed = true;
+    }
 }
 
 void Plane::do_nav_wp(const AP_Mission::Mission_Command& cmd)
@@ -564,6 +567,9 @@ bool Plane::verify_takeoff()
         // don't cross-track on completion of takeoff, as otherwise we
         // can end up doing too sharp a turn
         auto_state.next_wp_crosstrack = false;
+
+        speed_scaling_surpressed = false;
+
         return true;
     } else {
         return false;

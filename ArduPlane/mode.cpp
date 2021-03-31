@@ -12,6 +12,9 @@ void Mode::exit()
 
 bool Mode::enter()
 {
+    // re-enable speed scaling if left surpressed in previous state
+    plane.speed_scaling_surpressed = false;
+
     // cancel inverted flight
     plane.auto_state.inverted_flight = false;
 

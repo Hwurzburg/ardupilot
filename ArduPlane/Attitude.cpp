@@ -8,6 +8,7 @@
 float Plane::get_speed_scaler(void)
 {
     float aspeed, speed_scaler;
+   
     if (ahrs.airspeed_estimate(aspeed)) {
         if (aspeed > auto_state.highest_airspeed) {
             auto_state.highest_airspeed = aspeed;
@@ -45,6 +46,9 @@ float Plane::get_speed_scaler(void)
     } else {
         // no speed estimate and not armed, use a unit scaling
         speed_scaler = 1;
+    }
+    if (plane.speed_scaling_surpressed) { //scaling is surpressed during climb phase of automatic takeoffs with no airspeed sensor being used due to problems with inaccurate airspeed estimates
+        return MIN(speed_scaler, 1.0f) ;
     }
     return speed_scaler;
 }
