@@ -76,6 +76,4 @@ private:
 
     AP_Float _slew_rate_max;                // Maximum permitted angular rate control feedback servo slew rate (deg/sec)
     AP_Float _slew_rate_tau;                // Time constant used to recover gain after a slew rate exceedance (sec)
-
-    float last_ac_out;
 };

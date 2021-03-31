@@ -50,10 +50,10 @@ extern const AP_HAL::HAL& hal;
 #define AUTOTUNE_UNDERSHOOT_TIME 200
 
 // step size for increasing gains, percentage
-#define AUTOTUNE_INCREASE_STEP 5
+#define AUTOTUNE_INCREASE_STEP 12
 
 // step size for decreasing gains, percentage
-#define AUTOTUNE_DECREASE_STEP 8
+#define AUTOTUNE_DECREASE_STEP 15
 
 // min/max FF gains
 #define AUTOTUNE_MAX_FF 2.0f
@@ -63,8 +63,8 @@ extern const AP_HAL::HAL& hal;
 #define AUTOTUNE_MAX_TAU 0.7f
 #define AUTOTUNE_MIN_TAU 0.2f
 
-#define AUTOTUNE_MIN_IMAX 2000
-#define AUTOTUNE_MAX_IMAX 4000
+#define AUTOTUNE_MIN_IMAX 0.4
+#define AUTOTUNE_MAX_IMAX 0.9
 
 // constructor
 AP_AutoTune::AP_AutoTune(ATGains &_gains, ATType _type,
@@ -75,7 +75,8 @@ AP_AutoTune::AP_AutoTune(ATGains &_gains, ATType _type,
     running(false),
     type(_type),
     aparm(parms),
-    saturated_surfaces(false)
+    saturated_surfaces(false),
+    ff_filter(1)
 {}
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -93,20 +94,19 @@ AP_AutoTune::AP_AutoTune(ATGains &_gains, ATType _type,
  */
 static const struct {
     float tau;
-    float Pratio;
     float rmax;
 } tuning_table[] = {
-    { 0.70f, 0.050f,  20 },   // level 1
-    { 0.65f, 0.055f,  30 },   // level 2
-    { 0.60f, 0.060f,  40 },   // level 3
-    { 0.55f, 0.065f,  50 },   // level 4
-    { 0.50f, 0.070f,  60 },   // level 5
-    { 0.45f, 0.075f,  75 },   // level 6
-    { 0.40f, 0.080f,  90 },   // level 7
-    { 0.30f, 0.085f, 120 },   // level 8
-    { 0.20f, 0.090f, 160 },   // level 9
-    { 0.10f, 0.095f, 210 },   // level 10
-    { 0.05f, 0.100f, 300 },   // (yes, it goes to 11)
+    { 0.70f, 20 },   // level 1
+    { 0.65f, 30 },   // level 2
+    { 0.60f, 40 },   // level 3
+    { 0.55f, 50 },   // level 4
+    { 0.50f, 60 },   // level 5
+    { 0.45f, 75 },   // level 6
+    { 0.40f, 90 },   // level 7
+    { 0.30f, 120 },   // level 8
+    { 0.20f, 160 },   // level 9
+    { 0.10f, 210 },   // level 10
+    { 0.05f, 300 },   // (yes, it goes to 11)
 };
 
 /*
@@ -115,14 +115,12 @@ static const struct {
 void AP_AutoTune::start(void)
 {
     running = true;
-    state = DEMAND_UNSATURATED;
+    state = ATState::IDLE;
     uint32_t now = AP_HAL::millis();
 
-    state_enter_ms = now;
     last_save_ms = now;
 
-    last_save = current;
-    restore = current;
+    restore = last_save = get_gains(current);
 
     uint8_t level = aparm.autotune_level;
     if (level > ARRAY_SIZE(tuning_table)) {
@@ -134,8 +132,7 @@ void AP_AutoTune::start(void)
 
     current.rmax.set(tuning_table[level-1].rmax);
     current.tau.set(tuning_table[level-1].tau);
-
-    current.imax = constrain_float(current.imax, AUTOTUNE_MIN_IMAX, AUTOTUNE_MAX_IMAX);
+    rpid.kIMAX().set(constrain_float(rpid.kIMAX(), AUTOTUNE_MIN_IMAX, AUTOTUNE_MAX_IMAX));
 
     next_save = current;
 
@@ -157,75 +154,98 @@ void AP_AutoTune::stop(void)
 /*
   one update cycle of the autotuner
  */
-void AP_AutoTune::update(float desired_rate, float achieved_rate, float servo_out)
+void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
 {
     if (!running) {
         return;
     }
     check_save();
-
     // see what state we are in
-    ATState new_state;
-    float abs_desired_rate = fabsf(desired_rate);
-    uint32_t now = AP_HAL::millis();
+    ATState new_state = state;
+    const float desired_rate = pinfo.target;
+    const float actuator = pinfo.FF + pinfo.P + pinfo.I + pinfo.D;
+    const float actual_rate = pinfo.actual;
 
-    if (fabsf(servo_out) >= 45) {
-        // we have saturated the servo demand (not including
-        // integrator), we cannot get any information that would allow
-        // us to increase the gain
+    if (fabsf(actuator) >= 45) {
+        // we have saturated the servo demand. We cannot get any
+        // information that would allow us to increase the gain
         saturated_surfaces = true;
     }
 
-    if (abs_desired_rate < 0.8f * current.rmax) {
-        // we are not demanding max rate
-        new_state = DEMAND_UNSATURATED;
-    } else if (fabsf(achieved_rate) > abs_desired_rate) {
-        new_state = desired_rate > 0 ? DEMAND_OVER_POS : DEMAND_OVER_NEG;
-    } else {
-        new_state = desired_rate > 0 ? DEMAND_UNDER_POS : DEMAND_UNDER_NEG;
-    }
-    if (new_state != state) {
-        check_state_exit(now - state_enter_ms);
-        state = new_state;
-        state_enter_ms = now;
-        saturated_surfaces = false;
-    }
-    if (state != DEMAND_UNSATURATED) {
-        write_log(servo_out, desired_rate, achieved_rate);
-    }
-}
-
-/*
-  called when we change state to see if we should change gains
- */
-void AP_AutoTune::check_state_exit(uint32_t state_time_ms)
-{
+    max_actuator = MAX(max_actuator, actuator);
+    min_actuator = MIN(min_actuator, actuator);
+    max_rate = MAX(max_rate, actual_rate);
+    min_rate = MIN(min_rate, actual_rate);
+    
     switch (state) {
-    case DEMAND_UNSATURATED:
-        break;
-    case DEMAND_UNDER_POS:
-    case DEMAND_UNDER_NEG:
-        // we increase P if we have not saturated the surfaces during
-        // this state, and we have
-        if (state_time_ms >= AUTOTUNE_UNDERSHOOT_TIME && !saturated_surfaces) {
-            rpid.ff().set(rpid.ff() * (100+AUTOTUNE_INCREASE_STEP) * 0.01f);
-            if (rpid.ff() > AUTOTUNE_MAX_FF) {
-                rpid.ff().set(AUTOTUNE_MAX_FF);
-            }
-            Debug("UNDER FF -> %.3f\n", rpid.ff().get());
+    case ATState::IDLE:
+        if (desired_rate > 0.8 * current.rmax) {
+            new_state = ATState::DEMAND_POS;
+        } else if (desired_rate < -0.8 * current.rmax) {
+            new_state = ATState::DEMAND_NEG;
         }
         break;
-    case DEMAND_OVER_POS:
-    case DEMAND_OVER_NEG:
-        if (state_time_ms >= AUTOTUNE_OVERSHOOT_TIME) {
-            rpid.ff().set(rpid.ff() * (100-AUTOTUNE_DECREASE_STEP) * 0.01f);
-            if (rpid.ff() < AUTOTUNE_MIN_FF) {
-                rpid.ff().set(AUTOTUNE_MIN_FF);
-            }
-            Debug("OVER FF -> %.3f\n", rpid.ff().get());
+    case ATState::DEMAND_POS:
+        if (desired_rate < 0.2 * current.rmax) {
+            new_state = ATState::IDLE;
+        }
+        break;
+    case ATState::DEMAND_NEG:
+        if (desired_rate > -0.2 * current.rmax) {
+            new_state = ATState::IDLE;
         }
         break;
     }
+
+    if (new_state == state) {
+        return;
+    }
+
+    const uint32_t now = AP_HAL::millis();
+
+    if (new_state != ATState::IDLE) {
+        // starting an event
+        min_actuator = max_actuator = min_rate = max_rate = 0;
+        state_enter_ms = now;
+        state = new_state;
+        return;
+    }
+
+    if ((state == ATState::DEMAND_POS && max_rate < 0.01 * current.rmax) ||
+        (state == ATState::DEMAND_NEG && min_rate > -0.01 * current.rmax)) {
+        // we didn't get enough rate
+        state = ATState::IDLE;
+        return;
+    }
+
+    if (now - state_enter_ms < 200) {
+        // not long enough sample
+        state = ATState::IDLE;
+        return;
+    }
+
+    // we've finished an event
+    float ff;
+    if (state == ATState::DEMAND_POS) {
+        ff = max_actuator / (max_rate * scaler);
+    } else {
+        ff = min_actuator / (min_rate * scaler);
+    }
+
+    ff = ff_filter.apply(ff);
+
+    const float old_ff = rpid.ff();
+
+    // limit size of change
+    ff = constrain_float(ff,
+                         old_ff*(1-AUTOTUNE_DECREASE_STEP*0.01),
+                         old_ff*(1+AUTOTUNE_INCREASE_STEP*0.01));
+
+    Debug("FF=%.3f\n", ff);
+    rpid.ff().set(ff);
+
+    state = new_state;
+    state_enter_ms = now;
 }
 
 /*
@@ -241,67 +261,44 @@ void AP_AutoTune::check_save(void)
     // the last save period. This means the pilot has
     // AUTOTUNE_SAVE_PERIOD milliseconds to decide they don't like the
     // gains and switch out of autotune
-    ATGains tmp = current;
+    ATGains tmp = get_gains(current);
 
     save_gains(next_save);
     Debug("SAVE FF -> %.3f\n", rpid.ff().get());
 
     // restore our current gains
-    current = tmp;
+    set_gains(tmp);
 
     // if the pilot exits autotune they get these saved values
     restore = next_save;
 
     // the next values to save will be the ones we are flying now
-    next_save = current;
+    next_save = tmp;
     last_save_ms = AP_HAL::millis();
-}
-
-/*
-  log a parameter change from autotune
- */
-void AP_AutoTune::log_param_change(float v, const char *suffix)
-{
-    AP_Logger *logger = AP_Logger::get_singleton();
-    if (!logger->logging_started()) {
-        return;
-    }
-    char key[AP_MAX_NAME_SIZE+1];
-    if (type == AUTOTUNE_ROLL) {
-        strncpy(key, "RLL2SRV_", 9);
-        strncpy(&key[8], suffix, AP_MAX_NAME_SIZE-8);
-    } else {
-        strncpy(key, "PTCH2SRV_", 10);
-        strncpy(&key[9], suffix, AP_MAX_NAME_SIZE-9);
-    }
-    key[AP_MAX_NAME_SIZE] = 0;
-    logger->Write_Parameter(key, v);
 }
 
 /*
   set a float and save a float if it has changed by more than
   0.1%. This reduces the number of insignificant EEPROM writes
  */
-void AP_AutoTune::save_float_if_changed(AP_Float &v, float value, const char *suffix)
+void AP_AutoTune::save_float_if_changed(AP_Float &v, float value)
 {
     float old_value = v.get();
     v.set(value);
     if (value <= 0 || fabsf((value-old_value)/value) > 0.001f) {
         v.save();
-        log_param_change(v.get(), suffix);
     }
 }
 
 /*
   set a int16 and save if changed
  */
-void AP_AutoTune::save_int16_if_changed(AP_Int16 &v, int16_t value, const char *suffix)
+void AP_AutoTune::save_int16_if_changed(AP_Int16 &v, int16_t value)
 {
     int16_t old_value = v.get();
     v.set(value);
     if (old_value != v.get()) {
         v.save();
-        log_param_change(v.get(), suffix);
     }
 }
 
@@ -311,17 +308,40 @@ void AP_AutoTune::save_int16_if_changed(AP_Int16 &v, int16_t value, const char *
  */
 void AP_AutoTune::save_gains(const ATGains &v)
 {
-    current = last_save;
-    save_float_if_changed(current.tau, v.tau, "TCONST");
-#if 0
-    save_float_if_changed(rpid.kP(), v.P, "P");
-    save_float_if_changed(rpid.kI(), v.I, "I");
-    save_float_if_changed(rpid.kD(), v.D, "D");
-    save_float_if_changed(rpid.ff(), v.FF, "FF");
-    save_int16_if_changed(current.rmax, v.rmax, "RMAX");
-    save_int16_if_changed(current.imax, v.imax, "IMAX");
-#endif
-    last_save = current;
+    save_float_if_changed(current.tau, v.tau);
+    save_int16_if_changed(current.rmax, v.rmax);
+    save_float_if_changed(rpid.ff(), v.FF);
+    save_float_if_changed(rpid.kP(), v.P);
+    save_float_if_changed(rpid.kI(), v.I);
+    save_float_if_changed(rpid.kD(), v.D);
+    save_float_if_changed(rpid.kIMAX(), v.IMAX);
+}
+
+/*
+  get gains with PID components
+ */
+AP_AutoTune::ATGains AP_AutoTune::get_gains(const ATGains &v)
+{
+    ATGains ret = v;
+    ret.FF = rpid.ff();
+    ret.P = rpid.kP();
+    ret.I = rpid.kI();
+    ret.D = rpid.kD();
+    ret.IMAX = rpid.kIMAX();
+    return ret;
+}
+
+/*
+  set gains with PID components
+ */
+void AP_AutoTune::set_gains(const ATGains &v)
+{
+    current = v;
+    rpid.ff().set(v.FF);
+    rpid.kP().set(v.P);
+    rpid.kI().set(v.I);
+    rpid.kD().set(v.D);
+    rpid.kIMAX().set(v.IMAX);
 }
 
 void AP_AutoTune::write_log(float servo, float demanded, float achieved)

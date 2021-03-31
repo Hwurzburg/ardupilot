@@ -43,15 +43,7 @@ const AP_Param::GroupInfo AP_RollController::var_info[] = {
 	// @User: Advanced
     AP_GROUPINFO("2SRV_RMAX",   4, AP_RollController, gains.rmax,       0),
 
-    // @Param: 2SRV_IMAX
-	// @DisplayName: Integrator limit
-	// @Description: Limit of roll integrator gain in centi-degrees of servo travel. Servos are assumed to have +/- 4500 centi-degrees of travel, so a value of 3000 allows trim of up to 2/3 of servo travel range.
-	// @Range: 0 4500
-	// @Increment: 1
-	// @User: Advanced
-    AP_GROUPINFO("2SRV_IMAX",      5, AP_RollController, gains.imax,        3000),
-
-    // index 6 reserved for old FF
+    // index 5, 6 reserved for old IMAX, FF
 
     // @Param: 2SRV_SRMAX
     // @DisplayName: Servo slew rate limit
@@ -158,7 +150,7 @@ int32_t AP_RollController::_get_rate_out(float desired_rate, float scaler, bool 
 {
     const float dt = AP::scheduler().get_loop_period_s();
     const float eas2tas = _ahrs.get_EAS2TAS();
-    bool limit_I = fabsf(last_ac_out) >= 45;
+    bool limit_I = fabsf(_last_out) >= 45;
     float rate_x = _ahrs.get_gyro().x;
     float aspeed;
     float old_I = rate_pid.get_i();
@@ -212,8 +204,13 @@ int32_t AP_RollController::_get_rate_out(float desired_rate, float scaler, bool 
     float out = pinfo.FF + pinfo.P + pinfo.I + pinfo.D;
 
     // remember the last output to trigger the I limit
-    last_ac_out = out;
+    _last_out = out;
 
+    if (autotune.running && aspeed > aparm.airspeed_min) {
+        // let autotune have a go at the values 
+        autotune.update(pinfo, scaler);
+    }
+    
     // output is scaled to notional centidegrees of deflection
     return constrain_int32(out * 100, -4500, 4500);
 }
@@ -275,10 +272,12 @@ void AP_RollController::convert_pid()
         return;
     }
     float old_ff=0, old_p=1.0, old_i=0.3, old_d=0.08;
+    int16_t old_imax=3000;
     bool have_old = AP_Param::get_param_by_index(this, 1, AP_PARAM_FLOAT, &old_p);
     have_old |= AP_Param::get_param_by_index(this, 3, AP_PARAM_FLOAT, &old_i);
     have_old |= AP_Param::get_param_by_index(this, 2, AP_PARAM_FLOAT, &old_d);
     have_old |= AP_Param::get_param_by_index(this, 6, AP_PARAM_FLOAT, &old_ff);
+    have_old |= AP_Param::get_param_by_index(this, 5, AP_PARAM_INT16, &old_imax);
     if (!have_old) {
         // none of the old gains were set
         return;
@@ -289,5 +288,5 @@ void AP_RollController::convert_pid()
     rate_pid.kI().set_and_save_ifchanged(old_i * gains.tau);
     rate_pid.kP().set_and_save_ifchanged(old_d);
     rate_pid.kD().set_and_save_ifchanged(0);
-    rate_pid.kIMAX().set_and_save_ifchanged(gains.imax/4500.0);
+    rate_pid.kIMAX().set_and_save_ifchanged(old_imax/4500.0);
 }

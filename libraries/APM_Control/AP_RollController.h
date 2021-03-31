@@ -66,7 +66,6 @@ private:
 	uint32_t _last_t;
 	float _last_out;
     AC_PID rate_pid{0.08, 0.15, 0, 0.345, 0.666, 10, 10, 10, 0.02, 150, 1};
-    float last_ac_out;
 
     AP_Logger::PID_Info _pid_info;
 
