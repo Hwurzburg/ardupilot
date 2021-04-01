@@ -45,24 +45,6 @@ const AP_Param::GroupInfo AP_RollController::var_info[] = {
 
     // index 5, 6 reserved for old IMAX, FF
 
-    // @Param: 2SRV_SRMAX
-    // @DisplayName: Servo slew rate limit
-    // @Description: Sets an upper limit on the servo slew rate produced by the D-gain (roll rate feedback). If the amplitude of the control action produced by the roll rate feedback exceeds this value, then the D-gain is reduced to respect the limit. This limits the amplitude of high frequency oscillations caused by an excessive D-gain. The parameter should be set to no more than 25% of the servo's specified slew rate to allow for inertia and aerodynamic load effects. Note: The D-gain will not be reduced to less than 10% of the nominal value. A valule of zero will disable this feature.
-    // @Units: deg/s
-    // @Range: 0 500
-    // @Increment: 10.0
-    // @User: Advanced
-    AP_GROUPINFO("2SRV_SRMAX", 7, AP_RollController, _slew_rate_max, 150.0f),
-
-    // @Param: 2SRV_SRTAU
-    // @DisplayName: Servo slew rate decay time constant
-    // @Description: This sets the time constant used to recover the D-gain after it has been reduced due to excessive servo slew rate.
-    // @Units: s
-    // @Range: 0.5 5.0
-    // @Increment: 0.1
-    // @User: Advanced
-    AP_GROUPINFO("2SRV_SRTAU", 8, AP_RollController, _slew_rate_tau, 1.0f),
-
     // @Param: _RATE_P
     // @DisplayName: Roll axis rate controller P gain
     // @Description: Roll axis rate controller P gain.  Converts the difference between desired roll rate and actual roll rate into a motor speed output
@@ -129,14 +111,6 @@ const AP_Param::GroupInfo AP_RollController::var_info[] = {
     // @Increment: 0.5
     // @User: Advanced
 
-    // @Param: _RATE_STAU
-    // @DisplayName: Roll slew rate decay time constant
-    // @Description: This sets the time constant used to recover the P+D gain after it has been reduced due to excessive slew rate.
-    // @Units: s
-    // @Range: 0.5 5.0
-    // @Increment: 0.1
-    // @User: Advanced
-
     AP_SUBGROUPINFO(rate_pid, "_RATE_", 9, AP_RollController, AC_PID),
     
     AP_GROUPEND
@@ -149,8 +123,6 @@ AP_RollController::AP_RollController(AP_AHRS &ahrs, const AP_Vehicle::FixedWing 
         , _ahrs(ahrs)
 {
     AP_Param::setup_object_defaults(this, var_info);
-    _slew_rate_filter.set_cutoff_frequency(10.0f);
-    _slew_rate_filter.reset(0.0f);
     rate_pid.set_slew_limit_scale(45);
 }
 

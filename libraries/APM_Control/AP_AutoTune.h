@@ -97,8 +97,15 @@ private:
 
     ModeFilterFloat_Size3 ff_filter;
 
+    LowPassFilterFloat actuator_filter;
+
     float max_actuator;
     float min_actuator;
     float max_rate;
     float min_rate;
+    float max_target;
+    float min_target;
+    float max_P;
+    float max_D;
+    float min_Dmod;
 };
