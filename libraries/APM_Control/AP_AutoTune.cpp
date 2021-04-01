@@ -168,7 +168,8 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
     // see what state we are in
     ATState new_state = state;
     const float desired_rate = pinfo.target;
-    const float actuator = actuator_filter.apply(pinfo.FF + pinfo.P + pinfo.I + pinfo.D);
+    // filter actuator without I term
+    const float actuator = actuator_filter.apply(pinfo.FF + pinfo.P + pinfo.D);
     const float actual_rate = pinfo.actual;
 
     if (fabsf(actuator) >= 45) {
@@ -218,10 +219,10 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
 
     AP::logger().Write(
         type==AUTOTUNE_ROLL?"ATNR":"ATNP",
-        "TimeUS,Axis,State,Sur,Tar,FF,P,D",
-        "s-------",
-        "F-------",
-        "QBBfffff",
+        "TimeUS,Axis,State,Sur,Tar,FF,P,D,Action",
+        "s--------",
+        "F--------",
+        "QBBfffffB",
         AP_HAL::micros64(),
         unsigned(type),
         unsigned(new_state),
@@ -229,7 +230,8 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
         desired_rate,
         current.FF,
         current.P,
-        current.D);
+        current.D,
+        unsigned(action));
 
     if (new_state == state) {
         return;
@@ -251,21 +253,23 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
         (state == ATState::DEMAND_NEG && min_rate > -0.01 * current.rmax_neg)) {
         // we didn't get enough rate
         state = ATState::IDLE;
+        action = Action::LOW_RATE;
         return;
     }
 
     if (now - state_enter_ms < 100) {
         // not long enough sample
         state = ATState::IDLE;
+        action = Action::SHORT;
         return;
     }
 
     // we've finished an event. calculate the single-event FF value
     float FF;
     if (state == ATState::DEMAND_POS) {
-        FF = (max_actuator - pinfo.I) / (max_rate * scaler);
+        FF = max_actuator / (max_rate * scaler);
     } else {
-        FF = (min_actuator - pinfo.I) / (min_rate * scaler);
+        FF = min_actuator / (min_rate * scaler);
     }
 
     // apply median filter
@@ -278,43 +282,50 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
                          old_FF*(1-AUTOTUNE_DECREASE_FF_STEP*0.01),
                          old_FF*(1+AUTOTUNE_INCREASE_FF_STEP*0.01));
 
-    // see if we oscillated or overshot
+    // did the P or D components go over 15% of total actuator?
+    const float abs_actuator = MAX(max_actuator, fabsf(min_actuator));
+    const float PD_high = 0.15 * abs_actuator;
+    bool PD_significant = (max_P > PD_high || max_D > PD_high);
+
+    // see if we overshot
     bool overshot = (state == ATState::DEMAND_POS)?
         (max_rate > max_target*AUTOTUNE_OVERSHOOT):
         (min_rate < min_target*AUTOTUNE_OVERSHOOT);
-    if (min_Dmod < 1.0) {
-        // treat Dmod activiation as overshoot
-        overshot = true;
-    }
 
     // adjust P and D
     float D = rpid.kD();
     float P = rpid.kP();
 
-    D = MAX(D, 0.001);
+    D = MAX(D, 0.0005);
     P = MAX(P, 0.01);
 
-    if (overshot) {
-        // we're overshooting or oscillating, decrease gains
+    // if the slew limiter kicked in or
+    if (min_Dmod < 1.0 || (overshot && PD_significant)) {
+        // we're overshooting or oscillating, decrease gains. We
+        // assume the gain that needs to be reduced is the one that
+        // peaked at a higher value
         if (max_P < max_D) {
             D *= (100 - AUTOTUNE_DECREASE_PD_STEP)*0.01;
         } else {
             P *= (100 - AUTOTUNE_DECREASE_PD_STEP)*0.01;
         }
+        action = Action::LOWER_PD;
     } else {
+        const float low_PD = 0.05 * MAX(max_actuator, fabsf(min_actuator));
         // not oscillating or overshooting, increase the gains
-        if (max_P < 0.05*MAX(max_actuator, fabsf(min_actuator))) {
+        if (max_P < low_PD) {
             // P is very small, increase rapidly
             P *= (100 + AUTOTUNE_INCREASE_PD_LOW_STEP)*0.01;
         } else {
             P *= (100 + AUTOTUNE_INCREASE_PD_STEP)*0.01;
         }
-        if (max_D < 0.05*MAX(max_actuator, fabsf(min_actuator))) {
+        if (max_D < low_PD) {
             // D is very small, increase rapidly
             D *= (100 + AUTOTUNE_INCREASE_PD_LOW_STEP)*0.01;
         } else {
             D *= (100 + AUTOTUNE_INCREASE_PD_STEP)*0.01;
         }
+        action = Action::RAISE_PD;
     }
 
 
@@ -322,6 +333,10 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
     rpid.kP().set(P);
     rpid.kD().set(D);
     rpid.kI().set(P*AUTOTUNE_I_RATIO);
+    current.FF = FF;
+    current.P = P;
+    current.I = rpid.kI().get();
+    current.D = D;
 
     Debug("FPID=(%.3f, %.3f, %.3f, %.3f)\n",
           rpid.ff().get(),

@@ -80,6 +80,14 @@ private:
                         DEMAND_NEG};
     ATState state;
 
+    // the demanded/achieved state
+    enum class Action {NONE,
+                       LOW_RATE,
+                       SHORT,
+                       RAISE_PD,
+                       LOWER_PD};
+    Action action;
+
     // when we entered the current state
     uint32_t state_enter_ms;
 
