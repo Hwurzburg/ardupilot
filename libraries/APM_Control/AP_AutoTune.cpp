@@ -156,6 +156,19 @@ void AP_AutoTune::stop(void)
 }
 
 
+// @LoggerMessage: ATNP
+// @Description: Plane AutoTune
+// @Vehicles: Plane
+// @Field: TimeUS: Time since system startup
+// @Field: Axis: which axis is currently being tuned
+// @Field: State: tuning state
+// @Field: Sur: control surface deflection
+// @Field: Tar: target rate
+// @Field: FF: FF value
+// @Field: P: P value
+// @Field: D: D value
+// @Field: Action: action taken
+
 /*
   one update cycle of the autotuner
  */
@@ -220,8 +233,8 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
     AP::logger().Write(
         type==AUTOTUNE_ROLL?"ATNR":"ATNP",
         "TimeUS,Axis,State,Sur,Tar,FF,P,D,Action",
-        "s--------",
-        "F--------",
+        "s--dk----",
+        "F--00000-",
         "QBBfffffB",
         AP_HAL::micros64(),
         unsigned(type),
