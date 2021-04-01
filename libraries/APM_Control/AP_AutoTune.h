@@ -102,9 +102,11 @@ private:
     ATGains get_gains(const ATGains &current);
     void set_gains(const ATGains &v);
 
-    ModeFilterFloat_Size3 ff_filter;
+    // 5 point mode filter for FF estimate
+    ModeFilterFloat_Size5 ff_filter;
 
     LowPassFilterFloat actuator_filter;
+    LowPassFilterFloat rate_filter;
 
     float max_actuator;
     float min_actuator;
@@ -115,4 +117,5 @@ private:
     float max_P;
     float max_D;
     float min_Dmod;
+    float FF0;
 };

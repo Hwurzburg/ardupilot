@@ -74,7 +74,7 @@ AP_AutoTune::AP_AutoTune(ATGains &_gains, ATType _type,
     type(_type),
     aparm(parms),
     saturated_surfaces(false),
-    ff_filter(1)
+    ff_filter(2)
 {}
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -135,7 +135,9 @@ void AP_AutoTune::start(void)
 
     next_save = current;
 
+    // use 2Hz filters on the actuator and rate to reduce impact of noise
     actuator_filter.set_cutoff_frequency(AP::scheduler().get_loop_rate_hz(), 2);
+    rate_filter.set_cutoff_frequency(AP::scheduler().get_loop_rate_hz(), 2);
 
     // scale slew limit to more agressively find oscillations during autotune
     rpid.set_slew_limit_scale(1.5*45);
@@ -183,7 +185,7 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
     const float desired_rate = pinfo.target;
     // filter actuator without I term
     const float actuator = actuator_filter.apply(pinfo.FF + pinfo.P + pinfo.D);
-    const float actual_rate = pinfo.actual;
+    const float actual_rate = rate_filter.apply(pinfo.actual);
 
     if (fabsf(actuator) >= 45) {
         // we have saturated the servo demand. We cannot get any
@@ -232,15 +234,16 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
 
     AP::logger().Write(
         type==AUTOTUNE_ROLL?"ATNR":"ATNP",
-        "TimeUS,Axis,State,Sur,Tar,FF,P,D,Action",
-        "s--dk----",
-        "F--00000-",
-        "QBBfffffB",
+        "TimeUS,Axis,State,Sur,Tar,FF0,FF,P,D,Action",
+        "s--dk-----",
+        "F--000000-",
+        "QBBffffffB",
         AP_HAL::micros64(),
         unsigned(type),
         unsigned(new_state),
         actuator,
         desired_rate,
+        FF0,
         current.FF,
         current.P,
         current.D,
@@ -278,15 +281,14 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
     }
 
     // we've finished an event. calculate the single-event FF value
-    float FF;
     if (state == ATState::DEMAND_POS) {
-        FF = max_actuator / (max_rate * scaler);
+        FF0 = max_actuator / (max_rate * scaler);
     } else {
-        FF = min_actuator / (min_rate * scaler);
+        FF0 = min_actuator / (min_rate * scaler);
     }
 
     // apply median filter
-    FF = ff_filter.apply(FF);
+    float FF = ff_filter.apply(FF0);
 
     const float old_FF = rpid.ff();
 
