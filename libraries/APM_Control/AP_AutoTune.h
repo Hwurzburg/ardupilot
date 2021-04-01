@@ -10,7 +10,8 @@ class AP_AutoTune {
 public:
     struct ATGains {
         AP_Float tau;
-        AP_Int16 rmax;
+        AP_Int16 rmax_pos;
+        AP_Int16 rmax_neg;
         float FF, P, I, D, IMAX;
     };
 
@@ -85,8 +86,6 @@ private:
     void check_save(void);
     void check_state_exit(uint32_t state_time_ms);
     void save_gains(const ATGains &v);
-
-    void write_log(float servo, float demanded, float achieved);
 
     void save_float_if_changed(AP_Float &v, float value);
     void save_int16_if_changed(AP_Int16 &v, int16_t value);

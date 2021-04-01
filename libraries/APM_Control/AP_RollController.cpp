@@ -41,7 +41,7 @@ const AP_Param::GroupInfo AP_RollController::var_info[] = {
 	// @Units: deg/s
 	// @Increment: 1
 	// @User: Advanced
-    AP_GROUPINFO("2SRV_RMAX",   4, AP_RollController, gains.rmax,       0),
+    AP_GROUPINFO("2SRV_RMAX",   4, AP_RollController, gains.rmax_pos,       0),
 
     // index 5, 6 reserved for old IMAX, FF
 
@@ -230,10 +230,10 @@ int32_t AP_RollController::get_servo_out(int32_t angle_err, float scaler, bool d
 	float desired_rate = angle_err * 0.01f / gains.tau;
 
     // Limit the demanded roll rate
-    if (gains.rmax && desired_rate < -gains.rmax) {
-        desired_rate = - gains.rmax;
-    } else if (gains.rmax && desired_rate > gains.rmax) {
-        desired_rate = gains.rmax;
+    if (gains.rmax_pos && desired_rate < -gains.rmax_pos) {
+        desired_rate = - gains.rmax_pos;
+    } else if (gains.rmax_pos && desired_rate > gains.rmax_pos) {
+        desired_rate = gains.rmax_pos;
     }
 
     return _get_rate_out(desired_rate, scaler, disable_integrator);

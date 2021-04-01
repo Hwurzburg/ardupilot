@@ -41,7 +41,7 @@ const AP_Param::GroupInfo AP_PitchController::var_info[] = {
 	// @Units: deg/s
 	// @Increment: 1
 	// @User: Advanced
-    AP_GROUPINFO("2SRV_RMAX_UP",     4, AP_PitchController, gains.rmax,   0.0f),
+    AP_GROUPINFO("2SRV_RMAX_UP",     4, AP_PitchController, gains.rmax_pos,   0.0f),
 
     // @Param: 2SRV_RMAX_DN
 	// @DisplayName: Pitch down max rate
@@ -50,7 +50,7 @@ const AP_Param::GroupInfo AP_PitchController::var_info[] = {
 	// @Units: deg/s
 	// @Increment: 1
 	// @User: Advanced
-    AP_GROUPINFO("2SRV_RMAX_DN",     5, AP_PitchController, _max_rate_neg,   0.0f),
+    AP_GROUPINFO("2SRV_RMAX_DN",     5, AP_PitchController, gains.rmax_neg,   0.0f),
 
     // @Param: 2SRV_RLL
 	// @DisplayName: Roll compensation
@@ -321,10 +321,10 @@ int32_t AP_PitchController::get_servo_out(int32_t angle_err, float scaler, bool 
 	// as the rates will be tuned when upright, and it is common that
 	// much higher rates are needed inverted	
 	if (!inverted) {
-		if (_max_rate_neg && desired_rate < -_max_rate_neg) {
-			desired_rate = -_max_rate_neg;
-		} else if (gains.rmax && desired_rate > gains.rmax) {
-			desired_rate = gains.rmax;
+        if (gains.rmax_neg && desired_rate < -gains.rmax_neg) {
+            desired_rate = -gains.rmax_neg;
+        } else if (gains.rmax_pos && desired_rate > gains.rmax_pos) {
+            desired_rate = gains.rmax_pos;
 		}
 	}
 	
