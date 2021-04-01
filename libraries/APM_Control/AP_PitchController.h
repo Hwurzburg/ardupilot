@@ -11,15 +11,7 @@
 
 class AP_PitchController {
 public:
-    AP_PitchController(AP_AHRS &ahrs, const AP_Vehicle::FixedWing &parms)
-        : aparm(parms)
-        , autotune(gains, AP_AutoTune::AUTOTUNE_PITCH, parms, rate_pid)
-        , _ahrs(ahrs)
-    {
-        AP_Param::setup_object_defaults(this, var_info);
-        _slew_rate_filter.set_cutoff_frequency(10.0f);
-        _slew_rate_filter.reset(0.0f);
-    }
+    AP_PitchController(AP_AHRS &ahrs, const AP_Vehicle::FixedWing &parms);
 
     /* Do not allow copies */
     AP_PitchController(const AP_PitchController &other) = delete;

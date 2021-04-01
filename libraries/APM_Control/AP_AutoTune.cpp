@@ -43,28 +43,18 @@ extern const AP_HAL::HAL& hal;
 // time in milliseconds between autotune saves
 #define AUTOTUNE_SAVE_PERIOD 10000U
 
-// how much time we have to overshoot for to reduce gains
-#define AUTOTUNE_OVERSHOOT_TIME 100
-
-// how much time we have to undershoot for to increase gains
-#define AUTOTUNE_UNDERSHOOT_TIME 200
-
 // step size for increasing gains, percentage
 #define AUTOTUNE_INCREASE_STEP 12
 
 // step size for decreasing gains, percentage
 #define AUTOTUNE_DECREASE_STEP 15
 
-// min/max FF gains
-#define AUTOTUNE_MAX_FF 2.0f
-#define AUTOTUNE_MIN_FF 0.05f
-
-// tau ranges
-#define AUTOTUNE_MAX_TAU 0.7f
-#define AUTOTUNE_MIN_TAU 0.2f
-
+// limits on IMAX
 #define AUTOTUNE_MIN_IMAX 0.4
 #define AUTOTUNE_MAX_IMAX 0.9
+
+// ratio of I to P
+#define AUTOTUNE_I_RATIO 0.75
 
 // constructor
 AP_AutoTune::AP_AutoTune(ATGains &_gains, ATType _type,
@@ -224,7 +214,7 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
         return;
     }
 
-    // we've finished an event
+    // we've finished an event. calculate the single-event FF value
     float ff;
     if (state == ATState::DEMAND_POS) {
         ff = max_actuator / (max_rate * scaler);
@@ -232,11 +222,12 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
         ff = min_actuator / (min_rate * scaler);
     }
 
+    // apply median filter
     ff = ff_filter.apply(ff);
 
     const float old_ff = rpid.ff();
 
-    // limit size of change
+    // limit size of change in FF
     ff = constrain_float(ff,
                          old_ff*(1-AUTOTUNE_DECREASE_STEP*0.01),
                          old_ff*(1+AUTOTUNE_INCREASE_STEP*0.01));

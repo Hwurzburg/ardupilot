@@ -159,6 +159,17 @@ const AP_Param::GroupInfo AP_PitchController::var_info[] = {
     AP_GROUPEND
 };
 
+AP_PitchController::AP_PitchController(AP_AHRS &ahrs, const AP_Vehicle::FixedWing &parms)
+    : aparm(parms)
+    , autotune(gains, AP_AutoTune::AUTOTUNE_PITCH, parms, rate_pid)
+    , _ahrs(ahrs)
+{
+    AP_Param::setup_object_defaults(this, var_info);
+    _slew_rate_filter.set_cutoff_frequency(10.0f);
+    _slew_rate_filter.reset(0.0f);
+    rate_pid.set_slew_limit_scale(45);
+}
+
 /*
   AC_PID based rate controller
 */

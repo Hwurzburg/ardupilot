@@ -10,15 +10,7 @@
 
 class AP_RollController {
 public:
-    AP_RollController(AP_AHRS &ahrs, const AP_Vehicle::FixedWing &parms)
-        : aparm(parms)
-        , autotune(gains, AP_AutoTune::AUTOTUNE_ROLL, parms, rate_pid)
-        , _ahrs(ahrs)
-    {
-        AP_Param::setup_object_defaults(this, var_info);
-        _slew_rate_filter.set_cutoff_frequency(10.0f);
-        _slew_rate_filter.reset(0.0f);
-    }
+    AP_RollController(AP_AHRS &ahrs, const AP_Vehicle::FixedWing &parms);
 
     /* Do not allow copies */
     AP_RollController(const AP_RollController &other) = delete;
