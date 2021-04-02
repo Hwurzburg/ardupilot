@@ -30,8 +30,8 @@ public:
         rate_pid.set_integrator(rate_pid.get_i() * 0.995);
     }
     
-    void autotune_start(void) { autotune.start(); }
-    void autotune_restore(void) { autotune.stop(); }
+    void autotune_start(void);
+    void autotune_restore(void);
 
     const       AP_Logger::PID_Info& get_pid_info(void) const { return _pid_info; }
 
@@ -47,7 +47,8 @@ public:
 private:
     const AP_Vehicle::FixedWing &aparm;
     AP_AutoTune::ATGains gains;
-    AP_AutoTune autotune;
+    AP_AutoTune *autotune;
+    bool failed_autotune_alloc;
 	AP_Int16 _max_rate_neg;
 	AP_Float _roll_ff;
 	uint32_t _last_t;

@@ -135,7 +135,6 @@ const AP_Param::GroupInfo AP_PitchController::var_info[] = {
 
 AP_PitchController::AP_PitchController(AP_AHRS &ahrs, const AP_Vehicle::FixedWing &parms)
     : aparm(parms)
-    , autotune(gains, AP_AutoTune::AUTOTUNE_PITCH, parms, rate_pid)
     , _ahrs(ahrs)
 {
     AP_Param::setup_object_defaults(this, var_info);
@@ -221,9 +220,9 @@ int32_t AP_PitchController::_get_rate_out(float desired_rate, float scaler, bool
     // remember the last output to trigger the I limit
     _last_out = out;
 
-    if (autotune.running && aspeed > aparm.airspeed_min) {
+    if (autotune != nullptr && autotune->running && aspeed > aparm.airspeed_min) {
         // let autotune have a go at the values 
-        autotune.update(pinfo, scaler);
+        autotune->update(pinfo, scaler);
     }
     
     // output is scaled to notional centidegrees of deflection
@@ -373,4 +372,33 @@ void AP_PitchController::convert_pid()
     rate_pid.kP().set_and_save_ifchanged(old_d);
     rate_pid.kD().set_and_save_ifchanged(0);
     rate_pid.kIMAX().set_and_save_ifchanged(old_imax/4500.0);
+}
+
+/*
+  start an autotune
+ */
+void AP_PitchController::autotune_start(void)
+{
+    if (autotune == nullptr) {
+        autotune = new AP_AutoTune(gains, AP_AutoTune::AUTOTUNE_PITCH, aparm, rate_pid);
+        if (autotune == nullptr) {
+            if (!failed_autotune_alloc) {
+                GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "AutoTune: failed pitch allocation");
+            }
+            failed_autotune_alloc = true;
+        }
+    }
+    if (autotune != nullptr) {
+        autotune->start();
+    }
+}
+
+/*
+  restore autotune gains
+ */
+void AP_PitchController::autotune_restore(void)
+{
+    if (autotune != nullptr) {
+        autotune->stop();
+    }
 }
