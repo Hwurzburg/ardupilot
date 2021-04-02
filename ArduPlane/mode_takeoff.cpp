@@ -65,6 +65,7 @@ void ModeTakeoff::update()
             plane.prev_WP_loc = plane.current_loc;
             plane.next_WP_loc = plane.current_loc;
             takeoff_started = true;
+            plane.speed_scaling_surpressed = false;
             plane.set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_NORMAL);
         }
     }
@@ -87,6 +88,10 @@ void ModeTakeoff::update()
         plane.auto_state.takeoff_pitch_cd = level_pitch * 100;
 
         plane.set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_TAKEOFF);
+        if (!plane.ahrs.airspeed_sensor_enabled()) {
+            plane.speed_scaling_surpressed = true;
+
+        }
 
         if (!plane.throttle_suppressed) {
             gcs().send_text(MAV_SEVERITY_INFO, "Takeoff to %.0fm at %.1fm to %.1f deg",
@@ -112,7 +117,8 @@ void ModeTakeoff::update()
         plane.next_WP_loc.alt = start_loc.alt + target_alt*100.0;
 
         plane.set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_NORMAL);
-        
+        plane.speed_scaling_surpressed = false;
+
 #if AC_FENCE == ENABLED
         plane.fence.auto_enable_fence_after_takeoff();
 #endif

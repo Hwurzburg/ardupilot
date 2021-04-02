@@ -39,6 +39,7 @@ void ModeAuto::_exit()
         }
     }
     plane.auto_state.started_flying_in_auto_ms = 0;
+    plane.speed_scaling_surpressed = false;
 }
 
 void ModeAuto::update()
