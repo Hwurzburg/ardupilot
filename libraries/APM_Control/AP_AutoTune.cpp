@@ -258,8 +258,6 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
     if (new_state != ATState::IDLE) {
         // starting an event
         min_actuator = max_actuator = min_rate = max_rate = 0;
-        max_P = max_D = 0;
-        min_Dmod = 1;
         state_enter_ms = now;
         state = new_state;
         return;
@@ -270,6 +268,8 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
         // we didn't get enough rate
         state = ATState::IDLE;
         action = Action::LOW_RATE;
+        min_Dmod = 1;
+        max_P = max_D = 0;
         return;
     }
 
@@ -277,6 +277,8 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
         // not long enough sample
         state = ATState::IDLE;
         action = Action::SHORT;
+        min_Dmod = 1;
+        max_P = max_D = 0;
         return;
     }
 
@@ -359,6 +361,8 @@ void AP_AutoTune::update(AP_Logger::PID_Info &pinfo, float scaler)
           rpid.kI().get(),
           rpid.kD().get());
 
+    min_Dmod = 1;
+    max_P = max_D = 0;
     state = new_state;
     state_enter_ms = now;
 }
