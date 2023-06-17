@@ -86,7 +86,7 @@ The correct battery setting parameters are:
 
 ## Compass
 
-The KakuteH7-Wing does not have a builting compass, but you can attach an external compass using I2C on the SDA and SCL pads.
+The KakuteH7-Wing does not have a builtin compass, but you can attach an external compass using I2C on the SDA and SCL pads.
 
 ## Loading Firmware
 Firmware for these boards can be found at https://firmware.ardupilot.org in sub-folders labeled “KakuteH7-Wing”.
