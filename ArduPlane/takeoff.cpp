@@ -179,28 +179,35 @@ void Plane::takeoff_calc_roll(void)
  */
 void Plane::takeoff_calc_pitch(void)
 {
-    if (auto_state.highest_airspeed < g.takeoff_rotate_speed) {
-        // we have not reached rotate speed, use the specified takeoff target pitch angle
-        nav_pitch_cd = int32_t(100.0f * mode_takeoff.ground_pitch);
-        return;
-    }
 
-    if (ahrs.using_airspeed_sensor()) {
-        int16_t takeoff_pitch_min_cd = get_takeoff_pitch_min_cd();
-        calc_nav_pitch();
-        if (nav_pitch_cd < takeoff_pitch_min_cd) {
-            nav_pitch_cd = takeoff_pitch_min_cd;
-        }
-    } else {
-        if (g.takeoff_rotate_speed > 0) {
-            // Rise off ground takeoff so delay rotation until ground speed indicates adequate airspeed
-            nav_pitch_cd = (gps.ground_speed() / (float)aparm.airspeed_cruise) * auto_state.takeoff_pitch_cd;
-            nav_pitch_cd = constrain_int32(nav_pitch_cd, 500, auto_state.takeoff_pitch_cd); 
-        } else {
-            // Doing hand or catapult launch so need at least 5 deg pitch to prevent initial height loss
-            nav_pitch_cd = MAX(auto_state.takeoff_pitch_cd, 500);
-        }
-    }
+  // determine nominal climb pitch:if auto p1,if mode takeoff lvl pitch
+  int16_t takeoff_nominal_pitch_cd = auto_state.takeoff_pitch_cd;
+ 
+  // modify if ground run or TECs wants more climb
+  if (g.takeoff_rotate_speed > 0) {
+  // if rotation speed setup,calc pitch
+      if (auto_state.highest_airspeed < g.takeoff_rotate_speed) {
+          // we have not reached rotate speed
+          nav_pitch_cd = int32_t(100.0f * mode_takeoff.ground_pitch);
+       } else {
+          //now increase pitch to takeoff_nominal_pitch as speed increases
+          nav_pitch_cd = (gps.ground_speed() / (float)aparm.airspeed_min) * takeoff_nominal_pitch_cd;
+          nav_pitch_cd = constrain_int32(nav_pitch_cd, 500, takeoff_nominal_pitch_cd);
+      } 
+  } else {
+      // no ground run so set pitch to larger of takeoff_nominal_pitch or calc nav pitch
+      calc_nav_pitch();
+      if (nav_pitch_cd < takeoff_nominal_pitch_cd) {
+          nav_pitch_cd = takeoff_nominal_pitch_cd;
+      }
+  }
+  
+  // now lower if approaching target alt
+  int16_t takeoff_pitch_cd =  get_takeoff_pitch_cd();
+  if (takeoff_pitch_cd != auto_state.takeoff_pitch_cd) {
+      nav_pitch_cd = get_takeoff_pitch_cd();
+  }
+      
 
     if (aparm.stall_prevention != 0) {
         if (mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF ||
@@ -216,6 +223,7 @@ void Plane::takeoff_calc_pitch(void)
             nav_pitch_cd *= reduction;
         }
     }
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO,"Takeoff Pitch,nom= %f %f",double(nav_pitch_cd/100),double(takeoff_nominal_pitch_cd));
 }
 
 /*
@@ -242,11 +250,11 @@ void Plane::takeoff_calc_throttle(const bool use_max_throttle) {
     calc_throttle();
 }
 
-/* get the pitch min used during takeoff. This matches the mission pitch until near the end where it allows it to levels off
+/* get the pitch  used during takeoff. This matches the mission pitch until near the end where it allows it to levels off
  */
-int16_t Plane::get_takeoff_pitch_min_cd(void)
+int16_t Plane::get_takeoff_pitch_cd(void)
 {
-    if (flight_stage != AP_FixedWing::FlightStage::TAKEOFF) {
+    if (flight_stage != AP_FixedWing::FlightStage::TAKEOFF) { // for RTL climbs
         return auto_state.takeoff_pitch_cd;
     }
 
@@ -258,7 +266,7 @@ int16_t Plane::get_takeoff_pitch_min_cd(void)
         // if height-below-target has been initialized then use it to create and apply a scaler to the pitch_min
         if (auto_state.height_below_takeoff_to_level_off_cm != 0) {
             float scalar = remaining_height_to_target_cm / (float)auto_state.height_below_takeoff_to_level_off_cm;
-            return auto_state.takeoff_pitch_cd * scalar;
+             return auto_state.takeoff_pitch_cd * scalar;
         }
 
         // are we entering the region where we want to start levelling off before we reach takeoff alt?

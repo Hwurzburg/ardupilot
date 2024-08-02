@@ -600,7 +600,7 @@ void Plane::update_alt()
                                                  target_airspeed_cm,
                                                  flight_stage,
                                                  distance_beyond_land_wp,
-                                                 get_takeoff_pitch_min_cd(),
+                                                 get_takeoff_pitch_cd(),
                                                  throttle_nudge,
                                                  tecs_hgt_afe(),
                                                  aerodynamic_load_factor,
