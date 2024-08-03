@@ -78,6 +78,7 @@ void ModeTakeoff::update()
     }
 
     const float alt = target_alt;
+    plane.auto_state.takeoff_altitude_rel_cm = alt * 100; //so takeoff pitch calc works
     const float dist = target_dist;
     if (!takeoff_started) {
         const uint16_t altitude = plane.relative_ground_altitude(false,true);
@@ -136,21 +137,24 @@ void ModeTakeoff::update()
         plane.next_WP_loc.offset_bearing(direction, dist);
         plane.next_WP_loc.alt += alt*100.0;
 
-        plane.set_flight_stage(AP_FixedWing::FlightStage::NORMAL);
 
 #if AP_FENCE_ENABLED
         plane.fence.auto_enable_fence_after_takeoff();
 #endif
     }
 
+    if (plane.current_loc.alt - start_loc.alt >= alt*100 && plane.flight_stage == AP_FixedWing::FlightStage::TAKEOFF ) {
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO,"Takeofff alt reached");
+        plane.set_flight_stage(AP_FixedWing::FlightStage::NORMAL);
+    }
+    
+    plane.calc_throttle();
     if (plane.flight_stage == AP_FixedWing::FlightStage::TAKEOFF) {
-        SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, 100.0);
         plane.takeoff_calc_roll();
         plane.takeoff_calc_pitch();
     } else {
         plane.calc_nav_roll();
         plane.calc_nav_pitch();
-        plane.calc_throttle();
         //check if in long failsafe, if it is recall long failsafe now to get fs action via events call
         if (plane.long_failsafe_pending) {
         plane.long_failsafe_pending = false;
