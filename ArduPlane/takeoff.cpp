@@ -223,7 +223,7 @@ void Plane::takeoff_calc_pitch(void)
             nav_pitch_cd *= reduction;
         }
     }
-    GCS_SEND_TEXT(MAV_SEVERITY_INFO,"Takeoff Pitch,nom= %f %f",double(nav_pitch_cd/100),double(takeoff_nominal_pitch_cd));
+//    GCS_SEND_TEXT(MAV_SEVERITY_INFO,"Takeoff Pitch,nom= %f %f",double(nav_pitch_cd/100),double(takeoff_nominal_pitch_cd));
 }
 
 
@@ -237,7 +237,7 @@ int16_t Plane::get_takeoff_pitch_cd(void)
 
     int32_t relative_alt_cm = adjusted_relative_altitude_cm();
     int32_t remaining_height_to_target_cm = (auto_state.takeoff_altitude_rel_cm - relative_alt_cm);
-GCS_SEND_TEXT(MAV_SEVERITY_INFO,"remainig=%f",double(remaining_height_to_target_cm));
+//  GCS_SEND_TEXT(MAV_SEVERITY_INFO,"remainig=%f",double(remaining_height_to_target_cm));
     // seconds to target alt method
     if (g.takeoff_pitch_limit_reduction_sec > 0) {
         // if height-below-target has been initialized then use it to create and apply a scaler to the pitch_min
