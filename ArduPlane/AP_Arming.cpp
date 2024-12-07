@@ -320,6 +320,13 @@ bool AP_Arming_Plane::arm(const AP_Arming::Method method, const bool do_arming_c
 
     // rising edge of delay_arming oneshot
     delay_arming = true;
+    
+    //capture heading for autoland mode if option is set
+    if (plane.aparm.takeoff_options & (uint32_t)AP_FixedWing::TakeoffOption::AUTOLAND_DIR_ON_ARM) {
+        plane.takeoff_state.takeoff_initial_direction = wrap_360((plane.ahrs.yaw_sensor * 0.01f) + plane.mode_autoland.landing_dir_off);
+        plane.takeoff_state.takeoff_direction_initialized = true;
+        gcs().send_text(MAV_SEVERITY_INFO, "Autoland direction= %u",int(plane.takeoff_state.takeoff_initial_direction));
+    }
 
     send_arm_disarm_statustext("Throttle armed");
 

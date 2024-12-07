@@ -134,7 +134,9 @@ void ModeTakeoff::update()
                 plane.takeoff_state.throttle_max_timer_ms = millis();
                 takeoff_mode_setup = true;
                 plane.steer_state.hold_course_cd = wrap_360_cd(direction*100); // Necessary to allow Plane::takeoff_calc_roll() to function.
-                plane.takeoff_state.takeoff_direction_initialized = false;
+                if (!(plane.aparm.takeoff_options & (uint32_t)AP_FixedWing::TakeoffOption::AUTOLAND_DIR_ON_ARM)) {
+                    plane.takeoff_state.takeoff_direction_initialized = false;
+                }
             }
         }
     }
@@ -148,9 +150,9 @@ void ModeTakeoff::update()
     const float min_gps_speed = GPS_GND_CRS_MIN_SPD;
     if (!(plane.takeoff_state.takeoff_direction_initialized) && (plane.gps.ground_speed() > min_gps_speed)
        && (plane.flight_stage == AP_FixedWing::FlightStage::TAKEOFF)) {
-       plane.takeoff_state.takeoff_initial_direction = plane.gps.ground_course();
+       plane.takeoff_state.takeoff_initial_direction = wrap_360(plane.gps.ground_course() + plane.mode_autoland.landing_dir_off);
        plane.takeoff_state.takeoff_direction_initialized = true;
-       gcs().send_text(MAV_SEVERITY_INFO, "Takeoff initial direction= %u",int(plane.takeoff_state.takeoff_initial_direction));
+       gcs().send_text(MAV_SEVERITY_INFO, "Autoland direction= %u",int(plane.takeoff_state.takeoff_initial_direction));
     }
 
     // We update the waypoint to follow once we're past TKOFF_LVL_ALT or we

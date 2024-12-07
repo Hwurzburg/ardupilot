@@ -22,9 +22,11 @@ bool Plane::auto_takeoff_check(void)
         return false;
     }
 
-    // Reset states if process has been interrupted
+    // Reset states if process has been interrupted, except takeoff_direction_initialized if set
+    bool takeoff_dir_initialized = takeoff_state.takeoff_direction_initialized;
     if (takeoff_state.last_check_ms && (now - takeoff_state.last_check_ms) > 200) {
         memset(&takeoff_state, 0, sizeof(takeoff_state));
+        takeoff_state.takeoff_direction_initialized = takeoff_dir_initialized; //restore dir init state
         return false;
     }
 

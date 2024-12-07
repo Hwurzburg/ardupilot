@@ -24,6 +24,15 @@ const AP_Param::GroupInfo ModeAutoLand::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("WP_DIST", 2, ModeAutoLand, final_wp_dist, 400),
 
+    // @Param: DIR_OFF
+    // @DisplayName: Landing direction offset from takeoff
+    // @Description: The captured takeoff direction (at arming,if TKOFF_OPTION bit1 is set, or after ground course is established in autotakeoffs)is offset by this amount to create a different landing direction and approach.
+    // @Range: -360 360
+    // @Increment: 1
+    // @Units: m
+    // @User: Standard
+    AP_GROUPINFO("DIR_OFF", 3, ModeAutoLand, landing_dir_off, 0),
+   
     AP_GROUPEND
 };
 

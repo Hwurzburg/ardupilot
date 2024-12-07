@@ -885,6 +885,7 @@ public:
 
     AP_Int16 final_wp_alt;
     AP_Int16 final_wp_dist;
+    AP_Int16 landing_dir_off;
 
 protected:
     bool _enter() override;

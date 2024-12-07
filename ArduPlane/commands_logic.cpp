@@ -382,7 +382,9 @@ void Plane::do_takeoff(const AP_Mission::Mission_Command& cmd)
     // zero locked course
     steer_state.locked_course_err = 0;
     steer_state.hold_course_cd = -1;
-    takeoff_state.takeoff_direction_initialized = false;
+    if (!(aparm.takeoff_options & (uint32_t)AP_FixedWing::TakeoffOption::AUTOLAND_DIR_ON_ARM)) {
+        plane.takeoff_state.takeoff_direction_initialized = false;
+    }
     auto_state.baro_takeoff_alt = barometer.get_altitude();
 }
 
@@ -557,9 +559,11 @@ bool Plane::verify_takeoff()
             gps.ground_speed() > min_gps_speed &&
             hal.util->safety_switch_state() != AP_HAL::Util::SAFETY_DISARMED) {
             auto_state.takeoff_speed_time_ms = millis();
-            takeoff_state.takeoff_initial_direction = gps.ground_course();
+            if (!(aparm.takeoff_options & (uint32_t)AP_FixedWing::TakeoffOption::AUTOLAND_DIR_ON_ARM)) {
+            takeoff_state.takeoff_initial_direction = wrap_360(gps.ground_course() + mode_autoland.landing_dir_off);
             takeoff_state.takeoff_direction_initialized = true;
-            gcs().send_text(MAV_SEVERITY_INFO, "Takeoff initial direction= %u",int(takeoff_state.takeoff_initial_direction));
+            gcs().send_text(MAV_SEVERITY_INFO, "Autoland direction= %u",int(takeoff_state.takeoff_initial_direction));
+            }
         }
         if (auto_state.takeoff_speed_time_ms != 0 &&
             millis() - auto_state.takeoff_speed_time_ms >= 2000) {
