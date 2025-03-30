@@ -70,6 +70,9 @@ const AP_Scheduler::Task Sub::scheduler_tasks[] = {
 #endif
 
     SCHED_TASK(fifty_hz_loop,         50,     75,   3),
+#if RC_ENABLED
+    SCHED_TASK(rc_loop,              50,    130,  3),
+#endif
     SCHED_TASK_CLASS(AP_GPS, &sub.gps, update, 50, 200,   6),
 #if AP_OPTICALFLOW_ENABLED
     SCHED_TASK_CLASS(AP_OpticalFlow,          &sub.optflow,             update,         200, 160,   9),
@@ -120,9 +123,7 @@ const AP_Scheduler::Task Sub::scheduler_tasks[] = {
 #ifdef USERHOOK_SUPERSLOWLOOP
     SCHED_TASK(userhook_SuperSlowLoop, 1,     75,  90),
 #endif
-#ifdef RC_ENABLED
-    SCHED_TASK(rc_loop,              250,    130,  3),
-#endif
+
 };
 
 void Sub::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
