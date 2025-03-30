@@ -232,7 +232,9 @@ public:
         k_param_rangefinder_signal_min,
         k_param_surftrak_depth,
         k_param_pilot_speed,
-
+        k_param_failsafe_throttle,
+        k_param_throttle_fs_action,     // remove
+        k_param_failsafe_throttle_value,
         k_param_vehicle = 257, // vehicle common block of parameters
     };
 
@@ -276,6 +278,8 @@ public:
     // Throttle
     //
     AP_Int16        throttle_deadzone;
+    AP_Int8         failsafe_throttle;
+    AP_Int16        failsafe_throttle_value;
 
     // Misc
     //

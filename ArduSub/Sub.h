@@ -219,6 +219,10 @@ private:
         uint32_t terrain_last_failure_ms;   // the most recent time terrain data access failed
         uint32_t last_crash_warn_ms; // last time a crash warning was sent to gcs
         uint32_t last_ekf_warn_ms; // last time an ekf warning was sent to gcs
+#if RC_ENABLED
+        int8_t radio_counter;            // number of iterations with throttle below throttle_fs_value
+        uint8_t radio               : 1; // A status flag for the radio failsafe
+#endif    
 
         uint8_t pilot_input          : 1; // true if pilot input failsafe is active, handles things like joystick being disconnected during operation
         uint8_t gcs                  : 1; // A status flag for the ground station failsafe
@@ -472,6 +476,14 @@ private:
     void motors_output();
     void init_rc_in();
     void init_rc_out();
+#if RC_ENABLED
+    void rc_loop(); 
+    void read_radio();  
+        // last valid RC input time
+    uint32_t last_radio_update_ms;
+    void set_failsafe_radio(bool b);
+    void set_throttle_and_failsafe(uint16_t throttle_pwm);
+#endif
     void enable_motor_output();
     void init_joystick();
     void transform_manual_control_to_rc_override(int16_t x, int16_t y, int16_t z, int16_t r, uint16_t buttons, uint16_t buttons2, uint8_t enabled_extensions,

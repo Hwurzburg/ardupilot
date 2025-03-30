@@ -106,7 +106,25 @@ const AP_Param::Info Sub::var_info[] = {
     // @Values: 0:Disabled,1:Warn only
     // @User: Standard
     GSCALAR(failsafe_temperature, "FS_TEMP_ENABLE", FS_TEMP_DISABLED),
+    
+#if RC_ENABLED        
+    // @Param: FS_THR_ENABLE
+    // @DisplayName: Throttle Failsafe Enable
+    // @Description: The throttle failsafe allows you to configure a software failsafe activated by a setting on the throttle input channel
+    // @Values:  0:Disabled,1:Surface on throttle failsafe 
+    // @User: Standard
+    GSCALAR(failsafe_throttle,  "FS_THR_ENABLE",   0),
 
+    // @Param: FS_THR_VALUE
+    // @DisplayName: Throttle Failsafe Value
+    // @Description: The PWM level in microseconds on channel 3 below which throttle failsafe triggers
+    // @Range: 910 1100
+    // @Units: PWM
+    // @Increment: 1
+    // @User: Standard
+    GSCALAR(failsafe_throttle_value, "FS_THR_VALUE",  FS_THR_VALUE_DEFAULT),
+    
+#endif
     // @Param: FS_PRESS_MAX
     // @DisplayName: Internal Pressure Failsafe Threshold
     // @Description: The maximum internal pressure allowed before triggering failsafe. Failsafe action is determined by FS_PRESS_ENABLE parameter

@@ -120,6 +120,9 @@ const AP_Scheduler::Task Sub::scheduler_tasks[] = {
 #ifdef USERHOOK_SUPERSLOWLOOP
     SCHED_TASK(userhook_SuperSlowLoop, 1,     75,  90),
 #endif
+#ifdef RC_ENABLED
+    SCHED_TASK(rc_loop,              250,    130,  3),
+#endif
 };
 
 void Sub::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
@@ -486,5 +489,15 @@ bool Sub::ensure_ekf_origin()
 
     return true;
 }
+
+#if RC_ENABLED
+void Sub::rc_loop()
+{
+    // Read radio and 3-position switch on radio
+    // -----------------------------------------
+    read_radio();
+//    rc().read_mode_switch();
+}
+#endif
 
 AP_HAL_MAIN_CALLBACKS(&sub);
