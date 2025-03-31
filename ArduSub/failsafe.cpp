@@ -523,6 +523,8 @@ void Sub::set_failsafe_radio(bool b)
 */
         // update AP_Notify
         AP_Notify::flags.failsafe_radio = b;
+        GCS_SEND_TEXT(MAV_SEVERITY_WARNING,"failsafe");
+        
     }
 }
 #endif
