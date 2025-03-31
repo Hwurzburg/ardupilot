@@ -8,6 +8,7 @@ class RC_Channel_Sub : public RC_Channel
 public:
 
 protected:
+    __INITFUNC__ void init_aux_function(AUX_FUNC ch_option, AuxSwitchPos) override;
 
 private:
 

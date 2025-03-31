@@ -15,3 +15,11 @@ int8_t RC_Channels_Sub::flight_mode_channel_number() const
 {
     return 1; // sub does not have a flight mode channel
 }
+
+// init_aux_switch_function - initialize aux functions
+void RC_Channel_Sub::init_aux_function(const AUX_FUNC ch_option, const AuxSwitchPos ch_flag)
+{
+RC_Channel::init_aux_function(ch_option, ch_flag);
+}
+
+
