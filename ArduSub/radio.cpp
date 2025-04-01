@@ -72,7 +72,7 @@ void Sub::read_radio()
         failsafe.last_pilot_input_ms = tnow_ms;
         return;
     }
-        GCS_SEND_TEXT(MAV_SEVERITY_WARNING,"Gothere");
+    
    // No radio input this time
     if (failsafe.radio) {
         // already in failsafe! no further action

@@ -22,4 +22,24 @@ void RC_Channel_Sub::init_aux_function(const AUX_FUNC ch_option, const AuxSwitch
 RC_Channel::init_aux_function(ch_option, ch_flag);
 }
 
+bool RC_Channels_Sub::in_rc_failsafe() const
+{
+    return sub.failsafe.radio;
+}
 
+bool RC_Channels_Sub::has_valid_input() const
+{
+    if (in_rc_failsafe()) {
+        return false;
+    }
+    if (sub.failsafe.radio_counter != 0) {
+        return false;
+    }
+    return true;
+}
+
+// do_aux_function - implement the function invoked by auxiliary switches
+bool RC_Channel_Sub::do_aux_function(const AuxFuncTrigger &trigger)
+{
+    return RC_Channel::do_aux_function(trigger);
+}

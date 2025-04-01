@@ -9,7 +9,8 @@ public:
 
 protected:
     __INITFUNC__ void init_aux_function(AUX_FUNC ch_option, AuxSwitchPos) override;
-
+    bool do_aux_function(const AuxFuncTrigger &trigger) override;
+    
 private:
 
 };
@@ -17,7 +18,8 @@ private:
 class RC_Channels_Sub : public RC_Channels
 {
 public:
-
+    bool has_valid_input() const override;
+    bool in_rc_failsafe() const override;
     RC_Channel_Sub obj_channels[NUM_RC_CHANNELS];
     RC_Channel_Sub *channel(const uint8_t chan) override {
         if (chan >= NUM_RC_CHANNELS) {
@@ -25,9 +27,6 @@ public:
         }
         return &obj_channels[chan];
     }
-
-    // tell the gimbal code all is good with RC input:
-    bool in_rc_failsafe() const override { return false; };
 
 protected:
 
