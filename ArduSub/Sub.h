@@ -141,6 +141,12 @@ private:
     RC_Channel *channel_yaw;
     RC_Channel *channel_forward;
     RC_Channel *channel_lateral;
+    
+#if RC_ENABLED  
+    // flight modes convenience array
+    AP_Int8 *flight_modes;
+    const uint8_t num_flight_modes = 6;
+#endif
 
     AP_LeakDetector leak_detector;
 

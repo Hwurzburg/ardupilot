@@ -14,7 +14,10 @@ protected:
 #endif
     
 private:
-
+#if RC_ENABLED
+    // called when the mode switch changes position:
+    void mode_switch_changed(modeswitch_pos_t new_pos) override;
+#endif
 };
 
 class RC_Channels_Sub : public RC_Channels

@@ -208,6 +208,17 @@ public:
         k_param_cam_tilt_center, // deprecated
         k_param_frame_configuration,
 
+        // 200: flight modes
+        k_param_flight_mode1 = 200,
+        k_param_flight_mode2,
+        k_param_flight_mode3,
+        k_param_flight_mode4,
+        k_param_flight_mode5,
+        k_param_flight_mode6,
+        k_param_simple_modes,
+        k_param_flight_mode_chan,
+        k_param_initial_mode,
+        
         // Acro Mode parameters
         k_param_acro_yaw_p = 220, // Used in all modes for get_pilot_desired_yaw_rate
         k_param_acro_trainer,
@@ -342,6 +353,21 @@ public:
     AP_Float        acro_balance_pitch;
     AP_Int8         acro_trainer;
     AP_Float        acro_expo;
+    
+#if RC_ENABLED
+
+    // Flight modes
+    //
+    AP_Int8         flight_mode1;
+    AP_Int8         flight_mode2;
+    AP_Int8         flight_mode3;
+    AP_Int8         flight_mode4;
+    AP_Int8         flight_mode5;
+    AP_Int8         flight_mode6;
+    AP_Int8         simple_modes;
+    AP_Int8         flight_mode_chan;
+    AP_Int8         initial_mode;
+#endif    
 
     AP_Float                surface_depth;
     AP_Int8                 frame_configuration;
