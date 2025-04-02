@@ -367,10 +367,10 @@ public:
     // proximity (aka object avoidance) library
     AP_Proximity proximity;
 #endif
-
+#if RC_ENABLED
     // RC input channels
     RC_Channels_Sub rc_channels;
-
+#endif
     // control over servo output ranges
     SRV_Channels servo_channels;
 

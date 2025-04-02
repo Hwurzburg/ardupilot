@@ -38,11 +38,11 @@
 // RC
 //
 
-#ifndef RCMAP_ENABLED
-# define RCMAP_ENABLED 0
-#endif
 #ifndef RC_ENABLED
 # define RC_ENABLED 1
+#endif
+#ifndef RCMAP_ENABLED
+# define RCMAP_ENABLED RC_ENABLED
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

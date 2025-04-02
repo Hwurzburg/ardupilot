@@ -1011,7 +1011,7 @@ bool RC_Channel::init_position_on_first_radio_read(AUX_FUNC func) const
 }
 
 void RC_Channel::do_aux_function_armdisarm(const AuxSwitchPos ch_flag)
-{    GCS_SEND_TEXT(MAV_SEVERITY_WARNING,"Got Here");
+{
     // arm or disarm the vehicle
     switch (ch_flag) {
     case AuxSwitchPos::HIGH:
