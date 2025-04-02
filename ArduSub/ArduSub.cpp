@@ -500,7 +500,7 @@ void Sub::rc_loop()
     // Read radio and 3-position switch on radio
     // -----------------------------------------
     read_radio();
-//    rc().read_mode_switch();
+    rc().read_mode_switch();
 }
 #endif
 

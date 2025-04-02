@@ -106,6 +106,7 @@ public:
     friend class ParametersG2;
     friend class AP_Arming_Sub;
     friend class RC_Channels_Sub;
+    friend class RC_Channel_Sub;
     friend class Mode;
     friend class ModeManual;
     friend class ModeStabilize;
