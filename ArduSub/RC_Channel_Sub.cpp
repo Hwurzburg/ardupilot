@@ -38,9 +38,10 @@ bool RC_Channels_Sub::has_valid_input() const
     return true;
 }
 
+
 // do_aux_function - implement the function invoked by auxiliary switches
 bool RC_Channel_Sub::do_aux_function(const AuxFuncTrigger &trigger)
 {
-    return RC_Channel::do_aux_function(trigger);
+   return RC_Channel::do_aux_function(trigger);
 }
 #endif
