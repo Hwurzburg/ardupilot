@@ -18,7 +18,7 @@ int8_t RC_Channels_Sub::flight_mode_channel_number() const
 }
 
 void RC_Channel_Sub::mode_switch_changed(modeswitch_pos_t new_pos)
-{GCS_SEND_TEXT(MAV_SEVERITY_WARNING,"got here");
+{
     if (new_pos < 0 || new_pos > 6) {
         // should not have been called
         return;
