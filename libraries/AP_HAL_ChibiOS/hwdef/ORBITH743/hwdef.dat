@@ -193,7 +193,7 @@ SPIDEV osd           SPI2 DEVID4 MAX7456_CS   MODE0  10*MHZ  10*MHZ
 # two ICM42688 IMU                                                          
 IMU Invensensev3 SPI:icm42688_1 ROTATION_ROLL_180_YAW_270
 IMU Invensensev3 SPI:icm42688_2 ROTATION_ROLL_180_YAW_270
-define HAL_DEFAULT_INS_FAST_SAMPLE 1
+define HAL_DEFAULT_INS_FAST_SAMPLE 3
 
 # DPS310 integrated on I2C2 bus, multiple possible choices for external barometer
 # BARO SPL06  I2C:0:0x76
